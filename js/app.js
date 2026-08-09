@@ -731,31 +731,58 @@
     });
   });
 
-  /* ---------------- print / pdf ---------------- */
-  function entryToPrintHtml(e){
-    if(e.type === "book"){
-      var stars = "★".repeat(e.rating||0) + "☆".repeat(5-(e.rating||0));
-      return '<div style="margin-bottom:28px;"><h2 style="margin:0 0 4px;">'+escapeHtml(e.title)+'</h2>'
-        + '<p style="color:#555;margin:0 0 10px;">'+escapeHtml(e.author||"")+(e.publisher?' · '+escapeHtml(e.publisher):'')+' · '+fmtDate(e.createdAt)+' · '+stars+'</p>'
-        + '<p><b>읽게 된 계기</b><br>'+escapeHtml(e.reason||"-")+'</p>'
-        + '<p><b>줄거리 요약</b><br>'+escapeHtml(e.summary||"-")+'</p>'
-        + '<p><b>인상 깊은 구절</b><br>'+escapeHtml(e.quote||"-")+'</p>'
-        + '<p><b>내 삶에 적용할 점</b><br>'+escapeHtml(e.apply||"-")+'</p></div>';
+  /* ---------------- export template (shared by PDF + PNG) ---------------- */
+  function unitFieldsHtml(e){
+    var stars = "★".repeat(e.rating||0) + "☆".repeat(5-(e.rating||0));
+    var html = '<p class="et-meta">' + fmtDate(e.createdAt) + (e.range?' · '+escapeHtml(e.range):'') + ' · ' + stars + '</p>';
+    if(e.reason) html += '<div class="et-field"><span class="et-lbl">읽게 된 계기</span><span class="et-val">'+escapeHtml(e.reason)+'</span></div>';
+    html += '<div class="et-field"><span class="et-lbl">줄거리 요약</span><span class="et-val">'+escapeHtml(e.summary||"-")+'</span></div>';
+    html += '<div class="et-field"><span class="et-lbl">인상 깊은 구절</span><span class="et-val">'+escapeHtml(e.quote||"-")+'</span></div>';
+    html += '<div class="et-field"><span class="et-lbl">내 삶에 적용할 점</span><span class="et-val">'+escapeHtml(e.apply||"-")+'</span></div>';
+    return html;
+  }
+  function unitToTemplateHtml(u){
+    if(u.kind === "diary"){
+      var e = u.entry;
+      return '<div class="et-entry">'
+        + '<p class="et-title">' + fmtDate(e.createdAt) + '의 기록</p>'
+        + '<div class="et-field"><span class="et-lbl">오늘 한 일</span><span class="et-val">'+escapeHtml(e.did||"-")+'</span></div>'
+        + '<div class="et-field"><span class="et-lbl">감정 및 기분</span><span class="et-val">'+escapeHtml(e.mood||"-")+'</span></div>'
+        + '<div class="et-field"><span class="et-lbl">내일의 다짐</span><span class="et-val">'+escapeHtml(e.resolve||"-")+'</span></div>'
+        + '</div>';
     }
-    return '<div style="margin-bottom:28px;"><h2 style="margin:0 0 4px;">'+fmtDate(e.createdAt)+'의 기록</h2>'
-      + '<p><b>오늘 한 일</b><br>'+escapeHtml(e.did||"-")+'</p>'
-      + '<p><b>감정 및 기분</b><br>'+escapeHtml(e.mood||"-")+'</p>'
-      + '<p><b>내일의 다짐</b><br>'+escapeHtml(e.resolve||"-")+'</p></div>';
+    var first = u.sessions[0];
+    var head = '<p class="et-title">'+escapeHtml(first.title)+'</p>'
+      + '<p class="et-meta">'+escapeHtml(first.author||"")+(first.publisher?' · '+escapeHtml(first.publisher):'')+'</p>';
+    var body = u.sessions.map(function(e, i){
+      var label = u.sessions.length > 1 ? '<p class="et-session-label">'+(i+1)+'회차</p>' : "";
+      return '<div class="et-session">' + label + unitFieldsHtml(e) + '</div>';
+    }).join("");
+    return '<div class="et-entry">' + head + body + '</div>';
   }
-  function printNow(html){
-    var area = document.getElementById("printArea");
-    area.innerHTML = '<h1 style="font-family:sans-serif;">Yuuri · Women\'s Cave</h1>' + html;
-    window.print();
+  function buildExportTemplateHtml(units){
+    return '<div class="export-template">'
+      + '<div class="et-brand"><span class="et-brand-emoji">🍋</span><h1>Yuuri</h1></div>'
+      + '<p class="et-sub">Women\'s Cave</p>'
+      + units.map(unitToTemplateHtml).join("")
+      + '</div>';
   }
+  function withRenderedTemplate(units, fn){
+    var host = document.getElementById("exportRenderHost");
+    host.innerHTML = buildExportTemplateHtml(units);
+    var node = host.firstElementChild;
+    Promise.resolve(fn(node)).then(function(){ host.innerHTML = ""; }, function(err){
+      host.innerHTML = "";
+      console.error(err);
+      alert("파일 생성에 실패했어요. 다시 시도해주세요.");
+    });
+  }
+
   document.getElementById("printDetailBtn").addEventListener("click", function(){
     var e = entries.find(function(x){ return x.id === activeDetailId; });
     if(!e) return;
-    printNow(entryToPrintHtml(e));
+    var unit = e.type === "book" ? { kind:"book", sessions:[e] } : { kind:"diary", entry:e };
+    exportUnitsToPdf([unit]);
   });
 
   /* ---------------- export (select entries -> PDF or PNG) ---------------- */
@@ -838,71 +865,93 @@
     return units;
   }
 
-  function unitToPrintHtml(u){
-    if(u.kind === "diary") return entryToPrintHtml(u.entry);
-    var first = u.sessions[0];
-    var html = '<div style="margin-bottom:28px;"><h2 style="margin:0 0 4px;">'+escapeHtml(first.title)+'</h2>'
-      + '<p style="color:#555;margin:0 0 14px;">'+escapeHtml(first.author||"")+(first.publisher?' · '+escapeHtml(first.publisher):'')+'</p>';
-    html += u.sessions.map(function(e, i){
-      var stars = "★".repeat(e.rating||0) + "☆".repeat(5-(e.rating||0));
-      var sub = u.sessions.length > 1
-        ? '<p style="font-weight:bold;margin:14px 0 4px;">'+(i+1)+'회차 · '+fmtDate(e.createdAt)+(e.range?' · '+escapeHtml(e.range):'')+' · '+stars+'</p>'
-        : '<p style="color:#555;margin:0 0 10px;">'+fmtDate(e.createdAt)+(e.range?' · '+escapeHtml(e.range):'')+' · '+stars+'</p>';
-      var body = sub;
-      if(e.reason) body += '<p><b>읽게 된 계기</b><br>'+escapeHtml(e.reason)+'</p>';
-      body += '<p><b>줄거리 요약</b><br>'+escapeHtml(e.summary||"-")+'</p>';
-      body += '<p><b>인상 깊은 구절</b><br>'+escapeHtml(e.quote||"-")+'</p>';
-      body += '<p><b>내 삶에 적용할 점</b><br>'+escapeHtml(e.apply||"-")+'</p>';
-      return body;
-    }).join("");
-    return html + '</div>';
+  function timestamp(){ return new Date().toISOString().slice(0,10).replace(/-/g,""); }
+
+  function exportUnitsToPdf(units){
+    if(!units.length) return;
+    var RENDER_WIDTH = 800;
+    var SCALE = 2;
+    withRenderedTemplate(units, function(node){
+      return window.html2canvas(node, { backgroundColor:"#FFFCF2", scale: SCALE }).then(function(canvas){
+        var doc = new window.jspdf.jsPDF({ unit:"pt", format:"a4" });
+        var margin = 24;
+        var pageWidthPt = doc.internal.pageSize.getWidth();
+        var pageHeightPt = doc.internal.pageSize.getHeight();
+        var contentWidthPt = pageWidthPt - margin * 2;
+        var contentHeightPt = pageHeightPt - margin * 2;
+        var cssPxPerPt = RENDER_WIDTH / contentWidthPt;
+        var pageHeightCss = contentHeightPt * cssPxPerPt;
+        var totalCss = node.scrollHeight;
+
+        // prefer breaking between entries rather than mid-paragraph
+        var breakpointsCss = Array.prototype.map.call(node.querySelectorAll(".et-entry"), function(el){
+          return el.offsetTop + el.offsetHeight;
+        });
+        if(!breakpointsCss.length || breakpointsCss[breakpointsCss.length - 1] < totalCss - 1){
+          breakpointsCss.push(totalCss);
+        }
+
+        var ranges = [];
+        var cursor = 0;
+        while(cursor < totalCss - 0.5){
+          var limit = cursor + pageHeightCss;
+          var chosen = null;
+          for(var i = 0; i < breakpointsCss.length; i++){
+            if(breakpointsCss[i] > cursor + 0.5 && breakpointsCss[i] <= limit) chosen = breakpointsCss[i];
+          }
+          if(chosen === null) chosen = Math.min(limit, totalCss);
+          ranges.push([cursor, chosen]);
+          cursor = chosen;
+        }
+
+        ranges.forEach(function(range, idx){
+          var topCss = range[0], bottomCss = range[1];
+          var sliceHeightCss = bottomCss - topCss;
+          var sliceCanvas = document.createElement("canvas");
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = Math.max(1, Math.round(sliceHeightCss * SCALE));
+          var ctx = sliceCanvas.getContext("2d");
+          ctx.fillStyle = "#FFFCF2"; ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+          ctx.drawImage(canvas, 0, Math.round(topCss * SCALE), canvas.width, sliceCanvas.height, 0, 0, canvas.width, sliceCanvas.height);
+          var imgData = sliceCanvas.toDataURL("image/jpeg", 0.92);
+          if(idx > 0) doc.addPage();
+          var sliceHeightPt = sliceHeightCss / cssPxPerPt;
+          doc.addImage(imgData, "JPEG", margin, margin, contentWidthPt, sliceHeightPt);
+        });
+
+        doc.save("yuuri-기록-" + timestamp() + ".pdf");
+      });
+    });
+  }
+
+  function exportUnitsToPng(units){
+    if(!units.length) return;
+    withRenderedTemplate(units, function(node){
+      return window.html2canvas(node, { backgroundColor:"#FFFCF2", scale: 2 }).then(function(canvas){
+        return new Promise(function(resolve, reject){
+          canvas.toBlob(function(blob){
+            if(!blob){ reject(new Error("toBlob failed")); return; }
+            var a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "yuuri-기록-" + timestamp() + ".png";
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            resolve();
+          }, "image/png");
+        });
+      });
+    });
   }
 
   document.getElementById("exportPdfBtn").addEventListener("click", function(){
     var units = getSelectedExportUnits();
-    if(!units.length) return;
-    printNow(units.map(unitToPrintHtml).join(""));
     exportOverlay.classList.remove("open");
+    exportUnitsToPdf(units);
   });
 
   document.getElementById("exportPngBtn").addEventListener("click", function(){
     var units = getSelectedExportUnits();
-    if(!units.length) return;
-    var innerHtml = '<div style="font-family:-apple-system,\'Apple SD Gothic Neo\',sans-serif;">'
-      + '<h1 style="font-size:22px;margin:0 0 20px;">Yuuri · Women\'s Cave</h1>'
-      + units.map(unitToPrintHtml).join("")
-      + '</div>';
-    var width = 800;
-    var sessionCount = units.reduce(function(sum, u){ return sum + (u.kind === "book" ? u.sessions.length : 1); }, 0);
-    var height = Math.max(400, 140 + sessionCount * 260);
-    var svgMarkup = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '">'
-      + '<foreignObject width="100%" height="100%">'
-      + '<div xmlns="http://www.w3.org/1999/xhtml" style="width:' + (width-64) + 'px;padding:32px;background:#FFFCF2;color:#4A3B22;box-sizing:border-box;">' + innerHtml + '</div>'
-      + '</foreignObject></svg>';
-    var svgBlob = new Blob([svgMarkup], { type:"image/svg+xml;charset=utf-8" });
-    var svgUrl = URL.createObjectURL(svgBlob);
-    var img = new Image();
-    img.onload = function(){
-      var canvas = document.createElement("canvas");
-      canvas.width = width; canvas.height = height;
-      var ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#FFFCF2"; ctx.fillRect(0, 0, width, height);
-      ctx.drawImage(img, 0, 0);
-      URL.revokeObjectURL(svgUrl);
-      canvas.toBlob(function(blob){
-        var a = document.createElement("a");
-        var stamp = new Date().toISOString().slice(0,10).replace(/-/g,"");
-        a.href = URL.createObjectURL(blob);
-        a.download = "yuuri-기록-" + stamp + ".png";
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      }, "image/png");
-    };
-    img.onerror = function(){
-      alert("이미지 생성에 실패했어요. 표지 이미지가 외부 도메인 정책(CORS)에 막혔을 수 있어요 — PDF로 내보내기를 이용해주세요.");
-      URL.revokeObjectURL(svgUrl);
-    };
-    img.src = svgUrl;
     exportOverlay.classList.remove("open");
+    exportUnitsToPng(units);
   });
 
   document.addEventListener("keydown", function(ev){

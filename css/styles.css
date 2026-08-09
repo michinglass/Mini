@@ -314,13 +314,28 @@ button, input, textarea{ font-family:inherit; color:inherit; }
 }
 .export-group-title:first-child{ margin-top:0; }
 
-#printArea{ display:none; }
+#exportRenderHost{ position:fixed; left:-9999px; top:0; z-index:-1; }
 
-@media print{
-  body *{ visibility:hidden; }
-  #printArea, #printArea *{ visibility:visible; }
-  #printArea{ display:block; position:absolute; left:0; top:0; width:100%; padding:24px; }
+.export-template{
+  width:800px; padding:48px 56px; box-sizing:border-box;
+  background:#FFFCF2; color:#4A3B22;
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI","Malgun Gothic",sans-serif;
 }
+.export-template .et-brand{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+.export-template .et-brand-emoji{ font-size:26px; line-height:1; }
+.export-template h1{ font-size:22px; font-weight:800; margin:0; }
+.export-template .et-sub{ font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#BBA97C; margin:2px 0 30px; }
+.export-template .et-entry{ margin-bottom:26px; padding-bottom:22px; border-bottom:1px solid #F0DFA0; break-inside:avoid; }
+.export-template .et-entry:last-child{ border-bottom:none; margin-bottom:0; }
+.export-template .et-title{ font-size:17px; font-weight:800; margin:0 0 4px; }
+.export-template .et-meta{ font-size:12px; color:#8A7550; margin:0 0 16px; }
+.export-template .et-session{ margin-bottom:16px; break-inside:avoid; }
+.export-template .et-session:last-child{ margin-bottom:0; }
+.export-template .et-session-label{ font-size:12px; font-weight:700; color:#8A7550; margin:0 0 8px; }
+.export-template .et-field{ margin:0 0 10px; }
+.export-template .et-field:last-child{ margin-bottom:0; }
+.export-template .et-field .et-lbl{ display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:#BBA97C; margin-bottom:2px; }
+.export-template .et-field .et-val{ font-size:13.5px; line-height:1.55; white-space:pre-wrap; }
 
 @media (max-width:600px){
   .brand-text-wordmark{ font-size:18px; }
