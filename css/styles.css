@@ -290,6 +290,9 @@ button, input, textarea{ font-family:inherit; color:inherit; }
 .status-opt{ flex:1; appearance:none; border:1.5px solid var(--line); background:var(--bg); color:var(--ink-soft); font-size:12.5px; font-weight:700; padding:8px; border-radius:12px; cursor:pointer; text-align:center; }
 .status-opt.active{ background:var(--cobalt); border-color:var(--cobalt); color:#fff; }
 
+.audiobook-check{ display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:700; color:var(--ink-soft); }
+.audiobook-badge{ font-size:0.85em; margin-left:4px; }
+
 .detail-kicker{ display:inline-flex; align-items:center; gap:6px; font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--cobalt); margin-bottom:8px; }
 .detail-kicker.diary{ color:var(--brick); }
 .detail-session-badge{ font-size:10px; font-weight:700; background:var(--line-soft); color:var(--ink-soft); padding:1px 7px; border-radius:999px; margin-left:6px; text-transform:none; letter-spacing:0; }

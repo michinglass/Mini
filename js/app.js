@@ -101,7 +101,7 @@
           + bookThumbHtml(e)
           + '<div class="card-body">'
           + '<div class="card-kicker">독서록 <span class="card-status-pill">'+statusLabel+'</span>'+(sess.total>1?' <span class="card-status-pill">'+sess.index+'/'+sess.total+'회차</span>':'')+'</div>'
-          + '<p class="card-title">' + escapeHtml(e.title) + '</p>'
+          + '<p class="card-title">' + escapeHtml(e.title) + (e.isAudiobook? ' <span class="audiobook-badge">🎧</span>' : '') + '</p>'
           + '<p class="card-meta">' + escapeHtml(e.author||"") + (e.publisher? ' · ' + escapeHtml(e.publisher):'') + (e.range? ' · '+escapeHtml(e.range):'') + '</p>'
           + '<p class="card-snippet">' + escapeHtml(e.summary||e.reason||"") + '</p>'
           + (tagsHtml ? '<div class="card-tags">'+tagsHtml+'</div>' : '')
@@ -205,7 +205,7 @@
     body.innerHTML = dayEntries.map(function(e){
       if(e.type === "book"){
         var thumb = e.cover ? '<img src="'+e.cover+'" alt="">' : '<div class="sr-emoji">💛</div>';
-        return '<div class="search-result" data-id="'+e.id+'">'+thumb+'<div><div class="sr-title">'+escapeHtml(e.title)+'</div><div class="sr-meta">독서록 · '+escapeHtml(e.author||"")+'</div></div></div>';
+        return '<div class="search-result" data-id="'+e.id+'">'+thumb+'<div><div class="sr-title">'+escapeHtml(e.title)+(e.isAudiobook? ' 🎧' : '')+'</div><div class="sr-meta">독서록 · '+escapeHtml(e.author||"")+'</div></div></div>';
       }
       return '<div class="search-result" data-id="'+e.id+'"><div class="diary-glyph" style="width:28px;height:40px;"><span class="d" style="font-size:12px;">'+new Date(e.createdAt).getDate()+'</span></div><div><div class="sr-title">일기</div><div class="sr-meta">'+escapeHtml(e.mood||"")+'</div></div></div>';
     }).join("");
@@ -244,6 +244,7 @@
         showBookPreview(selectedBook);
         currentStatus = prefillEntry.status || "reading";
         updateStatusToggle();
+        document.getElementById("f_audiobook").checked = !!prefillEntry.isAudiobook;
         document.getElementById("f_range").value = prefillEntry.range || "";
         document.getElementById("f_reason").value = prefillEntry.reason || "";
         document.getElementById("f_summary").value = prefillEntry.summary || "";
@@ -368,6 +369,7 @@
     ["m_title","m_author","m_publisher","f_range","f_reason","f_summary","f_quote","f_apply","d_did","d_mood","d_resolve","genreCustomInput"].forEach(function(id){
       document.getElementById(id).value = "";
     });
+    document.getElementById("f_audiobook").checked = false;
     renderStars();
     renderGenreChips();
     updateReasonVisibility();
@@ -506,6 +508,7 @@
     return {
       type: currentType, bookMode: currentBookMode, status: currentStatus, rating: currentRating,
       hasCover: currentHasCover, selectedBook: selectedBook, genres: selectedGenres,
+      f_audiobook: document.getElementById("f_audiobook").checked,
       m_title: document.getElementById("m_title").value,
       m_author: document.getElementById("m_author").value,
       m_publisher: document.getElementById("m_publisher").value,
@@ -555,6 +558,7 @@
     selectedBook = s.selectedBook || null;
     if(selectedBook) showBookPreview(selectedBook);
     searchInput.value = s.bookSearch || "";
+    document.getElementById("f_audiobook").checked = !!s.f_audiobook;
     document.getElementById("m_title").value = s.m_title || "";
     document.getElementById("m_author").value = s.m_author || "";
     document.getElementById("m_publisher").value = s.m_publisher || "";
@@ -589,7 +593,8 @@
       var payload = {
         type:"book", bookId: normKey(title, author),
         title: title, author: author, publisher: publisher, cover: cover,
-        status: currentStatus, range: document.getElementById("f_range").value,
+        status: currentStatus, isAudiobook: document.getElementById("f_audiobook").checked,
+        range: document.getElementById("f_range").value,
         reason: document.getElementById("reasonFieldWrap").style.display === "none" ? "" : document.getElementById("f_reason").value,
         summary: document.getElementById("f_summary").value,
         quote: document.getElementById("f_quote").value,
@@ -686,7 +691,7 @@
       detailBody.innerHTML =
         '<div class="detail-kicker">독서록 <span class="detail-session-badge">'+statusLabel+'</span>'+(sess.total>1?' <span class="detail-session-badge">'+sess.index+'/'+sess.total+'회차</span>':'')+'</div>'
         + '<div class="detail-head">' + headThumb
-        + '<div><h3 class="detail-title">' + escapeHtml(e.title) + '</h3>'
+        + '<div><h3 class="detail-title">' + escapeHtml(e.title) + (e.isAudiobook? ' <span class="audiobook-badge">🎧</span>' : '') + '</h3>'
         + '<div class="detail-meta">' + escapeHtml(e.author||"") + (e.publisher?' · '+escapeHtml(e.publisher):'') + '</div>'
         + '<div class="detail-meta">' + fmtDate(e.createdAt) + (e.range?' · 읽은 범위 '+escapeHtml(e.range):'') + '</div>'
         + '<div class="detail-meta" style="color:var(--mustard)">' + stars + '</div></div></div>'
@@ -752,7 +757,7 @@
         + '</div>';
     }
     var first = u.sessions[0];
-    var head = '<p class="et-title">'+escapeHtml(first.title)+'</p>'
+    var head = '<p class="et-title">'+escapeHtml(first.title)+(first.isAudiobook? ' 🎧' : '')+'</p>'
       + '<p class="et-meta">'+escapeHtml(first.author||"")+(first.publisher?' · '+escapeHtml(first.publisher):'')+'</p>';
     var body = u.sessions.map(function(e, i){
       var label = u.sessions.length > 1 ? '<p class="et-session-label">'+(i+1)+'회차</p>' : "";
