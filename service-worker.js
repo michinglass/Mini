@@ -1,13 +1,13 @@
-var CACHE_NAME = "yuuri-cache-v1";
+var CACHE_NAME = "yuuri-cache-v2";
 var APP_SHELL = [
   "./",
   "./index.html",
   "./css/styles.css",
   "./js/app.js",
   "./manifest.json",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
-  "./icons/apple-touch-icon.png"
+  "./icons/icon-192-v2.png",
+  "./icons/icon-512-v2.png",
+  "./icons/apple-touch-icon-v2.png"
 ];
 
 self.addEventListener("install", function(event){
