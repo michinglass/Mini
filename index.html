@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Yuuri — Women's Cave</title>
+<meta name="description" content="독서록과 노트 일기장 — Yuuri의 Women's Cave">
+<meta name="theme-color" content="#F6D65C" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#2B2418" media="(prefers-color-scheme: dark)">
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/favicon-64.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Yuuri">
+<meta name="mobile-web-app-capable" content="yes">
+
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <header class="site-header">
+    <div class="brand">
+      <span class="brand-emoji" aria-hidden="true">🍋</span>
+      <div>
+        <span class="brand-text-wordmark disp">Yuuri</span>
+        <span class="brand-text-sub">WOMEN'S CAVE</span>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="openWriteBtn" type="button">+ 새 기록 쓰기</button>
+  </header>
+
+  <section class="calendar-card">
+    <div class="cal-head">
+      <div class="cal-title disp" id="calTitle"></div>
+      <div class="cal-nav">
+        <button class="btn btn-small btn-ghost" id="calPrev" type="button" aria-label="이전 달">‹</button>
+        <button class="btn btn-small btn-ghost" id="calNext" type="button" aria-label="다음 달">›</button>
+      </div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </section>
+
+  <div class="toolbar">
+    <input type="text" class="search-input" id="textSearch" placeholder="제목, 내용, 태그로 검색…">
+    <button class="btn btn-small" id="openExportBtn" type="button">내보내기</button>
+  </div>
+
+  <nav class="tab-bar" id="tabBar">
+    <button class="tab active" data-filter="all" type="button">전체 <span class="count" id="countAll">0</span></button>
+    <button class="tab" data-filter="book" type="button">독서록 <span class="count" id="countBook">0</span></button>
+    <button class="tab" data-filter="diary" type="button">일기 <span class="count" id="countDiary">0</span></button>
+    <button class="btn btn-small btn-ghost sort-btn" id="sortToggle" type="button">최신순 ▾</button>
+  </nav>
+
+  <main class="grid" id="cardGrid"></main>
+</div>
+
+<!-- write modal -->
+<div class="overlay" id="writeOverlay">
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="writeTitle">
+    <div class="panel-header">
+      <h2 id="writeTitle">새 기록 쓰기</h2>
+      <button class="icon-btn" id="closeWriteBtn" aria-label="닫기" type="button">✕</button>
+    </div>
+    <div class="panel-body" id="writePanelBody">
+      <div class="draft-banner" id="draftBanner" style="display:none;">
+        <span>임시저장된 글이 있어요.</span>
+        <div class="actions">
+          <button class="btn btn-small" id="draftLoadBtn" type="button">불러오기</button>
+          <button class="btn btn-small btn-ghost" id="draftDiscardBtn" type="button">새로 시작</button>
+        </div>
+      </div>
+
+      <div class="segmented" id="typeSegment">
+        <button type="button" class="active" data-type="book">독서록</button>
+        <button type="button" data-type="diary">일기</button>
+      </div>
+
+      <div id="bookFields">
+        <div class="segmented mini" id="bookModeSegment">
+          <button type="button" class="active" data-mode="search">책 검색</button>
+          <button type="button" data-mode="manual">직접 입력</button>
+        </div>
+
+        <div id="searchModeBox">
+          <div class="field search-box">
+            <label>책 검색 <span class="hint">제목 또는 저자로 검색</span></label>
+            <input type="text" id="bookSearchInput" placeholder="예: 아몬드, 클라라와 태양…" autocomplete="off">
+            <div class="search-results" id="searchResults" style="display:none;"></div>
+            <p class="mock-note">Google Books에서 검색합니다. 찾는 책이 없다면 위 "직접 입력" 탭을 이용하세요.</p>
+          </div>
+        </div>
+
+        <div id="manualModeBox" style="display:none;">
+          <div class="field-row">
+            <div class="field"><label>제목 *</label><input type="text" id="m_title" placeholder="책 제목"></div>
+            <div class="field"><label>저자</label><input type="text" id="m_author" placeholder="저자명"></div>
+          </div>
+          <div class="field"><label>출판사</label><input type="text" id="m_publisher" placeholder="출판사 (해외 도서는 원서명 표기도 가능)"></div>
+        </div>
+
+        <div class="book-preview" id="bookPreview" style="display:none;">
+          <img id="bpCover" alt="" style="display:none;">
+          <div class="sr-emoji" id="bpEmoji" style="display:none;">💛</div>
+          <div>
+            <div class="bp-title" id="bpTitle"></div>
+            <div class="bp-meta" id="bpMeta"></div>
+          </div>
+          <label class="btn btn-small bp-actions" style="cursor:pointer;">
+            표지 직접 업로드
+            <input type="file" id="coverUploadInput" accept="image/*" style="display:none;">
+          </label>
+        </div>
+
+        <div class="field">
+          <label>읽는 상태</label>
+          <div class="status-toggle" id="statusToggle">
+            <button type="button" class="status-opt active" data-status="reading">읽는 중</button>
+            <button type="button" class="status-opt" data-status="done">완독</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>읽은 범위 <span class="hint">페이지 또는 챕터 — 다회차 기록에 사용</span></label>
+          <input type="text" id="f_range" placeholder="예: 1~3장, 또는 p.10-120">
+        </div>
+
+        <div class="field" id="reasonFieldWrap">
+          <label>① 읽게 된 계기</label>
+          <textarea id="f_reason" placeholder="이 책을 읽게 된 이유는…"></textarea>
+        </div>
+        <p class="mock-note" id="reasonSkipNote" style="display:none;margin-bottom:14px;">이미 이 책의 첫 기록에 "읽게 된 계기"를 남기셨어요. 이번 회차부터는 생략됩니다.</p>
+        <div class="field">
+          <label>② 줄거리 요약</label>
+          <textarea id="f_summary" placeholder="간단한 줄거리를 적어보세요"></textarea>
+        </div>
+        <div class="field">
+          <label>③ 인상 깊은 구절</label>
+          <textarea id="f_quote" placeholder="기억에 남는 문장을 옮겨 적어보세요"></textarea>
+        </div>
+        <div class="field">
+          <label>④ 내 삶에 적용할 점</label>
+          <textarea id="f_apply" placeholder="이 책에서 얻은 것을 어떻게 적용할까요?"></textarea>
+        </div>
+        <div class="field">
+          <label>⑤ 별점 평가</label>
+          <div class="stars-input" id="starsInput"></div>
+        </div>
+        <div class="field">
+          <label>장르 태그</label>
+          <div class="chips" id="genreChips"></div>
+          <div class="chip-add">
+            <input type="text" id="genreCustomInput" placeholder="태그 직접 추가 후 Enter">
+            <button class="btn btn-small" id="genreAddBtn" type="button">추가</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="diaryFields" style="display:none;">
+        <div class="field">
+          <label>① 오늘 한 일</label>
+          <textarea id="d_did" placeholder="오늘 있었던 일을 적어보세요"></textarea>
+        </div>
+        <div class="field">
+          <label>② 감정 및 기분</label>
+          <div class="chips" id="moodChips">
+            <button type="button" class="chip">기쁨</button>
+            <button type="button" class="chip">평온</button>
+            <button type="button" class="chip">설렘</button>
+            <button type="button" class="chip">피곤</button>
+            <button type="button" class="chip">우울</button>
+            <button type="button" class="chip">화남</button>
+          </div>
+          <textarea id="d_mood" placeholder="오늘의 감정을 자유롭게 적어보세요"></textarea>
+        </div>
+        <div class="field">
+          <label>③ 내일의 다짐</label>
+          <textarea id="d_resolve" placeholder="내일은 이렇게 해봐야지…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <button class="btn btn-ghost" id="cancelWriteBtn" type="button">취소</button>
+      <button class="btn btn-primary" id="saveBtn" type="button">저장하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- detail modal -->
+<div class="overlay" id="detailOverlay">
+  <div class="panel" role="dialog" aria-modal="true">
+    <div class="panel-header">
+      <h2>기록 상세</h2>
+      <button class="icon-btn" id="closeDetailBtn" aria-label="닫기" type="button">✕</button>
+    </div>
+    <div class="panel-body" id="detailBody"></div>
+    <div class="panel-footer" style="justify-content:space-between;">
+      <button class="btn btn-danger btn-small" id="deleteBtn" type="button">삭제</button>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-small" id="printDetailBtn" type="button">PDF로 저장</button>
+        <button class="btn btn-small" id="editBtn" type="button">수정</button>
+        <button class="btn btn-ghost btn-small" id="closeDetailBtn2" type="button">닫기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- day chooser modal (calendar multi-entry day) -->
+<div class="overlay" id="chooserOverlay">
+  <div class="panel small" role="dialog" aria-modal="true">
+    <div class="panel-header">
+      <h2>이 날의 기록</h2>
+      <button class="icon-btn" id="closeChooserBtn" aria-label="닫기" type="button">✕</button>
+    </div>
+    <div class="panel-body" id="chooserBody"></div>
+  </div>
+</div>
+
+<!-- confirm modal (edit/delete reminder) -->
+<div class="overlay" id="confirmOverlay">
+  <div class="panel small" role="dialog" aria-modal="true">
+    <div class="panel-header">
+      <h2>잠깐</h2>
+      <button class="icon-btn" id="closeConfirmBtn" aria-label="닫기" type="button">✕</button>
+    </div>
+    <div class="panel-body">
+      <p class="confirm-message">모든 기록은 그만의 가치가 있습니다.<br><span id="confirmActionWord">수정</span>하시겠습니까?</p>
+      <p class="confirm-sub" id="confirmSub"></p>
+    </div>
+    <div class="panel-footer">
+      <button class="btn btn-ghost" id="confirmCancelBtn" type="button">취소</button>
+      <button class="btn btn-danger" id="confirmOkBtn" type="button">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- export modal -->
+<div class="overlay" id="exportOverlay">
+  <div class="panel small" role="dialog" aria-modal="true">
+    <div class="panel-header">
+      <h2>내보내기</h2>
+      <button class="icon-btn" id="closeExportBtn" aria-label="닫기" type="button">✕</button>
+    </div>
+    <div class="panel-body">
+      <label style="display:flex; align-items:center; gap:8px; font-weight:700; font-size:13.5px; margin-bottom:10px; padding-bottom:10px; border-bottom:1.5px solid var(--line-soft);">
+        <input type="checkbox" id="exportSelectAll"> 전체 선택
+      </label>
+      <div id="exportList"></div>
+    </div>
+    <div class="panel-footer">
+      <button class="btn btn-small" id="exportPdfBtn" type="button">PDF로 내보내기</button>
+      <button class="btn btn-small btn-primary" id="exportPngBtn" type="button">이미지로 저장</button>
+    </div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
