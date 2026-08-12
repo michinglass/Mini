@@ -37,36 +37,37 @@
     }
   }
 
+  // Open arena with scattered obstacles (not a corridor maze) — closer to
+  // Crazy Arcade's single-room maps than a Pac-Man/Bomberman grid layout.
   function buildMap() {
     const map = [];
     for (let r = 0; r < ROWS; r++) {
       const row = [];
       for (let c = 0; c < COLS; c++) {
-        if (r === 0 || c === 0 || r === ROWS - 1 || c === COLS - 1) {
-          row.push(HARD);
-        } else if (r % 2 === 0 && c % 2 === 0) {
-          row.push(HARD);
-        } else {
-          row.push(EMPTY);
-        }
+        const border = r === 0 || c === 0 || r === ROWS - 1 || c === COLS - 1;
+        row.push(border ? HARD : EMPTY);
       }
       map.push(row);
     }
 
     const safeZones = new Set();
     const spawnSafe = [
-      [1, 1], [1, 2], [2, 1],
-      [1, COLS - 2], [1, COLS - 3], [2, COLS - 2],
-      [ROWS - 2, 1], [ROWS - 2, 2], [ROWS - 3, 1],
-      [ROWS - 2, COLS - 2], [ROWS - 2, COLS - 3], [ROWS - 3, COLS - 2],
+      [1, 1], [1, 2], [2, 1], [2, 2],
+      [1, COLS - 2], [1, COLS - 3], [2, COLS - 2], [2, COLS - 3],
+      [ROWS - 2, 1], [ROWS - 2, 2], [ROWS - 3, 1], [ROWS - 3, 2],
+      [ROWS - 2, COLS - 2], [ROWS - 2, COLS - 3], [ROWS - 3, COLS - 2], [ROWS - 3, COLS - 3],
     ];
     spawnSafe.forEach(([r, c]) => safeZones.add(r + "," + c));
 
     for (let r = 1; r < ROWS - 1; r++) {
       for (let c = 1; c < COLS - 1; c++) {
-        if (map[r][c] !== EMPTY) continue;
         if (safeZones.has(r + "," + c)) continue;
-        if (Math.random() < 0.65) map[r][c] = SOFT;
+        const roll = Math.random();
+        if (roll < 0.12) {
+          map[r][c] = HARD; // scattered ice block, indestructible
+        } else if (roll < 0.55) {
+          map[r][c] = SOFT; // breakable crate
+        }
       }
     }
     return map;
@@ -88,6 +89,9 @@
       blastRange: 2,
       standingOn: null,
       faceDir: id === 1 ? "right" : "left",
+      moving: false,
+      animT: 0,
+      accent: id === 1 ? "#ffd23f" : "#c8f2ff",
     };
   }
 
@@ -230,6 +234,8 @@
       if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
       if (dx > 0) p.faceDir = "right";
       if (dx < 0) p.faceDir = "left";
+      p.moving = dx !== 0 || dy !== 0;
+      p.animT = (p.animT || 0) + (p.moving ? dt * 8 : 0);
       tryMove(p, dx, dy, dt);
     });
 
@@ -283,87 +289,193 @@
     }
   }
 
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (!map) return;
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
 
+  const CRATE_COLORS = ["#ffb14e", "#ff8fa3", "#8fd694", "#8ec9ff", "#ffd166"];
+
+  function drawWalls() {
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const x = c * CELL, y = r * CELL;
-        ctx.fillStyle = (r + c) % 2 === 0 ? "#cdeeff" : "#b9e4fb";
+        ctx.fillStyle = (r + c) % 2 === 0 ? "#eaf9ff" : "#d8f1fb";
         ctx.fillRect(x, y, CELL, CELL);
 
         const t = map[r][c];
         if (t === HARD) {
-          ctx.fillStyle = "#35506b";
-          ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
-          ctx.fillStyle = "#4a6a8a";
-          ctx.fillRect(x + 4, y + 4, CELL - 8, CELL - 8);
-        } else if (t === SOFT) {
-          ctx.fillStyle = "#4f8fce";
-          ctx.fillRect(x + 2, y + 2, CELL - 4, CELL - 4);
-          ctx.strokeStyle = "#2c6aa3";
+          roundRect(x + 3, y + 3, CELL - 6, CELL - 6, 8);
+          ctx.fillStyle = "#7fa9c9";
+          ctx.fill();
+          ctx.strokeStyle = "#4d7599";
           ctx.lineWidth = 2;
-          ctx.strokeRect(x + 2, y + 2, CELL - 4, CELL - 4);
+          ctx.stroke();
+          roundRect(x + 8, y + 7, CELL - 20, 8, 4);
+          ctx.fillStyle = "rgba(255,255,255,0.55)";
+          ctx.fill();
+        } else if (t === SOFT) {
+          const color = CRATE_COLORS[Math.abs((r * 31 + c * 17) % CRATE_COLORS.length)];
+          roundRect(x + 3, y + 3, CELL - 6, CELL - 6, 10);
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.strokeStyle = "rgba(0,0,0,0.18)";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.strokeStyle = "rgba(255,255,255,0.6)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x + CELL / 2, y + 6);
+          ctx.lineTo(x + CELL / 2, y + CELL - 6);
+          ctx.moveTo(x + 6, y + CELL / 2);
+          ctx.lineTo(x + CELL - 6, y + CELL / 2);
+          ctx.stroke();
         }
       }
     }
+  }
 
-    if (bombs) {
-      bombs.forEach((b) => {
-        const cx = b.c * CELL + CELL / 2;
-        const cy = b.r * CELL + CELL / 2;
-        const pulse = 1 + Math.sin((1.9 - b.timer) * 12) * 0.08;
-        const urgency = Math.max(0, 1 - b.timer / 1.9);
-        ctx.beginPath();
-        ctx.arc(cx, cy, (CELL / 2 - 4) * pulse, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${60 + urgency * 180}, ${140 - urgency * 100}, 255, 0.9)`;
+  function drawBombs() {
+    if (!bombs) return;
+    bombs.forEach((b) => {
+      const cx = b.c * CELL + CELL / 2;
+      const cy = b.r * CELL + CELL / 2;
+      const pulse = 1 + Math.sin((1.9 - b.timer) * 12) * 0.1;
+      const urgency = Math.max(0, 1 - b.timer / 1.9);
+      const rad = (CELL / 2 - 5) * pulse;
+
+      ctx.beginPath();
+      ctx.moveTo(cx - 3, cy + rad - 2);
+      ctx.lineTo(cx + 3, cy + rad - 2);
+      ctx.lineTo(cx, cy + rad + 5);
+      ctx.closePath();
+      ctx.fillStyle = "#2c6aa3";
+      ctx.fill();
+
+      const grad = ctx.createRadialGradient(cx - rad * 0.35, cy - rad * 0.35, 1, cx, cy, rad);
+      const baseR = Math.round(120 + urgency * 120);
+      const baseG = Math.round(200 - urgency * 120);
+      grad.addColorStop(0, "#f2ffff");
+      grad.addColorStop(0.55, `rgb(${baseR}, ${baseG}, 255)`);
+      grad.addColorStop(1, `rgb(${baseR - 40}, ${baseG - 40}, 220)`);
+      ctx.beginPath();
+      ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.strokeStyle = "#0a2b4d";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.ellipse(cx - rad * 0.35, cy - rad * 0.35, rad * 0.3, rad * 0.18, -0.6, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      ctx.fill();
+    });
+  }
+
+  function drawExplosions() {
+    if (!explosions) return;
+    explosions.forEach((ex) => {
+      const alpha = Math.max(0, ex.timeLeft / ex.total);
+      ex.cells.forEach(({ r, c }) => {
+        const x = c * CELL, y = r * CELL;
+        const cx = x + CELL / 2, cy = y + CELL / 2;
+        ctx.fillStyle = `rgba(150, 225, 255, ${0.5 * alpha + 0.1})`;
+        roundRect(x + 2, y + 2, CELL - 4, CELL - 4, 10);
         ctx.fill();
-        ctx.strokeStyle = "#0a2b4d";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      });
-    }
 
-    if (explosions) {
-      explosions.forEach((ex) => {
-        const alpha = Math.max(0, ex.timeLeft / ex.total);
-        ex.cells.forEach(({ r, c }) => {
-          const x = c * CELL, y = r * CELL;
-          ctx.fillStyle = `rgba(160, 220, 255, ${0.55 * alpha + 0.15})`;
-          ctx.fillRect(x + 2, y + 2, CELL - 4, CELL - 4);
-          ctx.fillStyle = `rgba(255, 255, 255, ${0.6 * alpha})`;
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.7 * alpha})`;
+        ctx.beginPath();
+        ctx.arc(cx, cy, (CELL / 2 - 6) * alpha, 0, Math.PI * 2);
+        ctx.fill();
+
+        for (let i = 0; i < 5; i++) {
+          const ang = (i / 5) * Math.PI * 2 + alpha * 2;
+          const dist = (CELL / 2) * (1 - alpha) + 4;
           ctx.beginPath();
-          ctx.arc(x + CELL / 2, y + CELL / 2, (CELL / 2 - 6) * alpha, 0, Math.PI * 2);
+          ctx.arc(cx + Math.cos(ang) * dist, cy + Math.sin(ang) * dist, 3 * alpha, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255,255,255,${0.8 * alpha})`;
           ctx.fill();
-        });
+        }
       });
-    }
+    });
+  }
 
-    if (players) {
-      [players[1], players[2]].forEach((p) => {
-        if (!p.alive) return;
-        const cx = p.x + p.w / 2;
-        const cy = p.y + p.h / 2;
+  function drawPlayers() {
+    if (!players) return;
+    [players[1], players[2]].forEach((p) => {
+      if (!p.alive) return;
+      const cx = p.x + p.w / 2;
+      const cy = p.y + p.h / 2;
+      const bounce = p.moving ? Math.abs(Math.sin(p.animT)) * 3 : 0;
+      const bodyR = p.w / 2;
+      const squash = 1 - bounce * 0.03;
+
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + bodyR - 2, bodyR * 0.8, bodyR * 0.28, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(10, 43, 77, 0.18)";
+      ctx.fill();
+
+      const bodyCy = cy - bounce;
+      const grad = ctx.createRadialGradient(cx - bodyR * 0.3, bodyCy - bodyR * 0.4, 1, cx, bodyCy, bodyR);
+      grad.addColorStop(0, "#ffffff");
+      grad.addColorStop(0.25, p.color);
+      grad.addColorStop(1, p.color);
+      ctx.save();
+      ctx.translate(cx, bodyCy);
+      ctx.scale(1, squash);
+      ctx.translate(-cx, -bodyCy);
+      ctx.beginPath();
+      ctx.arc(cx, bodyCy, bodyR, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.strokeStyle = "#0a2b4d";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.beginPath();
+      ctx.arc(cx, bodyCy - bodyR * 0.55, bodyR * 0.95, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 5;
+      ctx.stroke();
+
+      const eyeOffset = p.faceDir === "right" ? 4 : -4;
+      const eyeY = bodyCy - 2;
+      ["l", "r"].forEach((side, i) => {
+        const sx = cx + eyeOffset + (side === "l" ? -6 : 6);
         ctx.beginPath();
-        ctx.arc(cx, cy, p.w / 2, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.fill();
-        ctx.strokeStyle = "#0a2b4d";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
+        ctx.arc(sx, eyeY, 4, 0, Math.PI * 2);
         ctx.fillStyle = "#fff";
-        const eyeOffset = p.faceDir === "right" ? 4 : -4;
-        ctx.beginPath();
-        ctx.arc(cx + eyeOffset, cy - 3, 3.5, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = "#0a2b4d";
         ctx.beginPath();
-        ctx.arc(cx + eyeOffset + (p.faceDir === "right" ? 1.2 : -1.2), cy - 3, 1.6, 0, Math.PI * 2);
+        ctx.arc(sx + (p.faceDir === "right" ? 1.4 : -1.4), eyeY, 1.8, 0, Math.PI * 2);
+        ctx.fillStyle = "#0a2b4d";
         ctx.fill();
       });
-    }
+
+      ["l", "r"].forEach((side) => {
+        const sx = cx + (side === "l" ? -bodyR * 0.65 : bodyR * 0.65);
+        ctx.beginPath();
+        ctx.ellipse(sx, bodyCy + bodyR * 0.35, 3.5, 2.2, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255, 120, 140, 0.55)";
+        ctx.fill();
+      });
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!map) return;
+    drawWalls();
+    drawBombs();
+    drawExplosions();
+    drawPlayers();
   }
 
   let lastTime = performance.now();
