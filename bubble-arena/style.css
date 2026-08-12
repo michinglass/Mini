@@ -1,0 +1,117 @@
+:root {
+  --p1: #ff5a5f;
+  --p2: #2f8fff;
+  --bg-deep: #063a6b;
+  --bg-mid: #0e5a9c;
+  --tile-light: #cdeeff;
+  --tile-dark: #a9dcf7;
+  --wall-hard: #35506b;
+  --wall-soft: #4f8fce;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, var(--bg-mid), var(--bg-deep));
+  font-family: "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+  color: #eaf6ff;
+  padding: 24px 12px;
+}
+
+.wrap {
+  width: 100%;
+  max-width: 640px;
+  text-align: center;
+}
+
+h1 {
+  margin: 0 0 4px;
+  font-size: 2rem;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.25);
+}
+
+.subtitle {
+  margin: 0 0 16px;
+  color: #bfe4ff;
+  font-size: 0.9rem;
+}
+
+#scoreboard {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 4px 10px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.score.p1 { color: var(--p1); }
+.score.p2 { color: var(--p2); }
+
+#stage {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+  border: 4px solid #0a2b4d;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--tile-light);
+}
+
+#overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 20, 40, 0.86);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+#overlay.hidden { display: none; }
+
+#overlay-inner { max-width: 460px; }
+
+#overlay-inner h2 { margin: 0 0 8px; font-size: 1.3rem; }
+#overlay-inner p { margin: 4px 0; color: #d7ecff; font-size: 0.9rem; }
+
+.controls {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  margin: 16px 0;
+  text-align: left;
+}
+
+.control-col h3 { margin: 0 0 4px; font-size: 0.95rem; }
+.control-col p { margin: 2px 0; font-size: 0.85rem; }
+
+kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 2px 6px;
+  margin: 0 2px;
+  border-radius: 5px;
+  background: #eaf6ff;
+  color: #0a2b4d;
+  font-size: 0.8rem;
+  font-weight: 700;
+  box-shadow: 0 2px 0 #9cb9cf;
+}
+
+.hint { margin-top: 14px; font-weight: 700; color: #ffe27a; }
+
+.footer {
+  margin-top: 14px;
+  font-size: 0.8rem;
+  color: #9cc8ea;
+}

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>버블 아레나 - 로컬 2인 대전</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <h1>💧 버블 아레나</h1>
+    <p class="subtitle">크레이지 아케이드에서 영감을 받은 미니 로컬 대전 게임</p>
+
+    <div id="scoreboard">
+      <span class="score p1">🔴 Player 1: <b id="score-p1">0</b></span>
+      <span class="score p2">🔵 Player 2: <b id="score-p2">0</b></span>
+    </div>
+
+    <div id="stage">
+      <canvas id="game" width="600" height="440"></canvas>
+      <div id="overlay">
+        <div id="overlay-inner">
+          <h2 id="overlay-title">버블 아레마에 오신 것을 환영합니다</h2>
+          <p id="overlay-message">물풍선을 설치해 상대를 물속에 가둬보세요!</p>
+          <div class="controls">
+            <div class="control-col">
+              <h3>🔴 Player 1</h3>
+              <p>이동: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></p>
+              <p>물풍선: <kbd>Space</kbd></p>
+            </div>
+            <div class="control-col">
+              <h3>🔵 Player 2</h3>
+              <p>이동: <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd></p>
+              <p>물풍선: <kbd>Enter</kbd></p>
+            </div>
+          </div>
+          <p class="hint" id="overlay-hint"><kbd>R</kbd> 키를 눌러 시작</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="footer">벽을 터뜨려 길을 만들고, 물풍선 폭발 범위 안에 상대를 가두면 승리합니다.</p>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
